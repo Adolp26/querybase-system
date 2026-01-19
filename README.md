@@ -186,7 +186,7 @@ postgres:
 - [ ] Interface admin (Laravel)
 - [ ] Autenticação (API keys)
 - [ ] Rate limiting
-- [ ] Métricas (Prometheus) (só se tiver com tempo disponível)
+<!-- - [ ] Métricas (Prometheus) (só se tiver com tempo disponível) -->
 
 ## Desenvolvimento
 
@@ -200,7 +200,7 @@ go test ./...
 # Verificar dependências
 go mod tidy
 ```
-
+<!-- 
 ## Licença
 
-MIT
+MIT -->
