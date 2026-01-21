@@ -84,13 +84,14 @@ curl "http://localhost:8080/api/query/employees-by-department?department=10"
 ```
 querybase/
 ├── cmd/api/main.go           # Entrada da aplicação
-├── configs/config.yaml       # Configurações
+├── configs/config.example.yaml  # Configurações exemplo
 ├── docker/
 │   ├── docker-compose.yml    # Redis + PostgreSQL
 │   └── init-scripts/         # Schema inicial
 ├── internal/
 │   ├── database/             # Conexões (Oracle, Redis, Postgres)
 │   ├── handlers/             # HTTP handlers
+│   ├── middleware/           # Auth, CORS, Rate Limit, Security
 │   ├── models/               # Structs de dados
 │   ├── repository/           # Acesso ao PostgreSQL
 │   └── services/             # Lógica de negócio
@@ -177,16 +178,68 @@ postgres:
 | `datetime` | YYYY-MM-DD HH:MM:SS | `timestamp=2024-01-15 10:30:00` |
 | `boolean` | true/false | `ativo=true` |
 
+## Segurança
+
+A API possui camadas de segurança configuráveis:
+
+### API Key Authentication
+
+```yaml
+security:
+  enable_auth: true
+  api_keys:
+    - "sua-chave-secreta-1"
+    - "sua-chave-secreta-2"
+```
+
+```bash
+# Via header
+curl -H "X-API-Key: sua-chave-secreta-1" http://localhost:8080/api/queries
+
+# Via query param
+curl "http://localhost:8080/api/queries?api_key=sua-chave-secreta-1"
+```
+
+### Rate Limiting
+
+```yaml
+security:
+  enable_rate_limit: true
+  requests_per_minute: 60
+  burst_size: 10
+```
+
+### CORS
+
+```yaml
+security:
+  allowed_origins:
+    - "https://seu-frontend.com"
+    - "http://localhost:3000"
+```
+
+### Headers de Segurança
+
+Aplicados automaticamente em todas as respostas:
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `X-XSS-Protection: 1; mode=block`
+
+### Input Sanitization
+
+Proteção contra padrões maliciosos nos parâmetros de entrada.
+
 ## Roadmap
 
 - [x] API básica com cache
 - [x] Queries dinâmicas do PostgreSQL
 - [x] Validação de parâmetros
 - [x] Log de execuções
+- [x] Autenticação (API keys)
+- [x] Rate limiting
+- [x] CORS configurável
+- [x] Headers de segurança
 - [ ] Interface admin (Laravel)
-- [ ] Autenticação (API keys)
-- [ ] Rate limiting
-<!-- - [ ] Métricas (Prometheus) (só se tiver com tempo disponível) -->
 
 ## Desenvolvimento
 

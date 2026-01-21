@@ -6,6 +6,7 @@ import (
 
 	"github.com/adolp26/querybase/internal/database"
 	"github.com/adolp26/querybase/internal/handlers"
+	"github.com/adolp26/querybase/internal/middleware"
 	"github.com/adolp26/querybase/internal/repository"
 	"github.com/adolp26/querybase/internal/services"
 	"github.com/adolp26/querybase/pkg/config"
@@ -46,24 +47,50 @@ func main() {
 
 	cacheService := services.NewCacheService(redisClient)
 	queryService := services.NewQueryService(oracleClient, cacheService)
-
 	queryRepo := repository.NewQueryRepository(postgresClient.GetDB())
 
 	testHandler := handlers.NewTestHandler(cacheService)
 	employeeHandler := handlers.NewEmployeeHandler(queryService)
-
 	dynamicHandler := handlers.NewDynamicQueryHandler(queryRepo, queryService, cacheService)
 
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	router := gin.Default()
+	router := gin.New()
+	router.Use(gin.Logger())
+	router.Use(gin.Recovery())
 
-	// Health check
+	corsConfig := middleware.NewCORSConfig()
+	if len(cfg.Security.AllowedOrigins) > 0 {
+		corsConfig.AllowOrigins = cfg.Security.AllowedOrigins
+	}
+	router.Use(middleware.CORS(corsConfig))
+
+	router.Use(middleware.SecurityHeaders())
+	router.Use(middleware.InputSanitizer())
+
+	rateLimitConfig := middleware.NewRateLimitConfig()
+	rateLimitConfig.Enabled = cfg.Security.EnableRateLimit
+	if cfg.Security.RequestsPerMinute > 0 {
+		rateLimitConfig.RequestsPerMinute = cfg.Security.RequestsPerMinute
+	}
+	if cfg.Security.BurstSize > 0 {
+		rateLimitConfig.BurstSize = cfg.Security.BurstSize
+	}
+	router.Use(middleware.RateLimit(rateLimitConfig))
+
+	authConfig := middleware.NewAuthConfig()
+	authConfig.Enabled = cfg.Security.EnableAuth
+	for _, key := range cfg.Security.APIKeys {
+		if key != "" {
+			authConfig.AddKey(key)
+		}
+	}
+	router.Use(middleware.APIKeyAuth(authConfig))
+
 	router.GET("/health", handlers.HealthCheck)
 
-	// Endpoints de teste/legado
 	router.GET("/api/test", testHandler.GetTestData)
 	router.GET("/api/employees", employeeHandler.GetAll)
 	router.GET("/api/employees/department/:department", employeeHandler.GetByDepartment)
@@ -71,24 +98,18 @@ func main() {
 	router.GET("/api/queries", dynamicHandler.ListQueries)
 	router.GET("/api/query/:slug", dynamicHandler.Execute)
 
-	// Iniciar servidor
 	addr := fmt.Sprintf(":%s", cfg.Server.Port)
 	fmt.Println("")
 	fmt.Printf("🚀 QueryBase API rodando em http://localhost%s\n", addr)
 	fmt.Println("")
-	fmt.Println("📚 Endpoints disponíveis:")
-	fmt.Println("   GET /health                              - Health check")
-	fmt.Println("   GET /api/test                            - Teste de cache")
-	fmt.Println("   GET /api/employees                       - Listar funcionários")
-	fmt.Println("   GET /api/employees/department/:dept      - Funcionários por depto")
+	fmt.Println("🔒 Segurança:")
+	fmt.Printf("   Auth:       %v\n", cfg.Security.EnableAuth)
+	fmt.Printf("   Rate Limit: %v (%d req/min)\n", cfg.Security.EnableRateLimit, cfg.Security.RequestsPerMinute)
 	fmt.Println("")
-	fmt.Println("   GET /api/queries                         - Listar queries disponíveis")
-	fmt.Println("   GET /api/query/:slug                     - Executar query dinâmica")
-	fmt.Println("")
-	fmt.Println("📝 Exemplos:")
-	fmt.Println("   curl http://localhost:8080/api/queries")
-	fmt.Println("   curl http://localhost:8080/api/query/employees-all")
-	fmt.Println("   curl \"http://localhost:8080/api/query/employees-by-department?department=10\"")
+	fmt.Println("📚 Endpoints:")
+	fmt.Println("   GET /health              - Health check")
+	fmt.Println("   GET /api/queries         - Listar queries")
+	fmt.Println("   GET /api/query/:slug     - Executar query")
 	fmt.Println("")
 
 	if err := router.Run(addr); err != nil {
