@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: querybase-web-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    networks:
+      - querybase-network
+    depends_on:
+      - postgres
+
+  nginx:
+    image: nginx:alpine
+    container_name: querybase-web-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx:/etc/nginx/conf.d
+    networks:
+      - querybase-network
+    depends_on:
+      - app
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: querybase-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: querybase
+      POSTGRES_PASSWORD: querybase123
+      POSTGRES_DB: querybase_metadata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../querybase-api/docker/init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U querybase -d querybase_metadata"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - querybase-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: querybase-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - querybase-network
+
+networks:
+  querybase-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
