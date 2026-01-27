@@ -239,7 +239,7 @@ Proteção contra padrões maliciosos nos parâmetros de entrada.
 - [x] Rate limiting
 - [x] CORS configurável
 - [x] Headers de segurança
-- [ ] Interface admin (Laravel)
+- [ ] Interface admin (Laravel) (querybase-web)
 
 ## Desenvolvimento
 
