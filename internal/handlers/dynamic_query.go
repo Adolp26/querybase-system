@@ -8,39 +8,65 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/adolp26/querybase/internal/database"
 	"github.com/adolp26/querybase/internal/models"
 	"github.com/adolp26/querybase/internal/repository"
 	"github.com/adolp26/querybase/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
+
+
 type DynamicQueryHandler struct {
-	queryRepo    *repository.QueryRepository
-	queryService *services.QueryService
-	cacheService *services.CacheService
+	queryRepo      *repository.QueryRepository
+	datasourceRepo *repository.DatasourceRepository
+	connManager    *database.ConnectionManager
+	cacheService   *services.CacheService
 }
 
 func NewDynamicQueryHandler(
 	queryRepo *repository.QueryRepository,
-	queryService *services.QueryService,
+	datasourceRepo *repository.DatasourceRepository,
+	connManager *database.ConnectionManager,
 	cacheService *services.CacheService,
 ) *DynamicQueryHandler {
 	return &DynamicQueryHandler{
-		queryRepo:    queryRepo,
-		queryService: queryService,
-		cacheService: cacheService,
+		queryRepo:      queryRepo,
+		datasourceRepo: datasourceRepo,
+		connManager:    connManager,
+		cacheService:   cacheService,
 	}
 }
 
+// GET /api/query/:slug?param1=value1&param2=value2
 func (h *DynamicQueryHandler) Execute(c *gin.Context) {
 	slug := c.Param("slug")
 	startTime := time.Now()
 
 	ctx := c.Request.Context()
+
 	query, err := h.queryRepo.FindBySlug(ctx, slug)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error":   "Query não encontrada",
+			"error":   "Query nao encontrada",
+			"slug":    slug,
+			"details": err.Error(),
+		})
+		return
+	}
+
+	if query.DatasourceID == nil || *query.DatasourceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Query nao possui datasource vinculado",
+			"slug":  slug,
+		})
+		return
+	}
+
+	datasource, err := h.datasourceRepo.FindByID(ctx, *query.DatasourceID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Erro ao buscar datasource",
 			"slug":    slug,
 			"details": err.Error(),
 		})
@@ -50,7 +76,7 @@ func (h *DynamicQueryHandler) Execute(c *gin.Context) {
 	params, validationErrors := h.extractAndValidateParams(c, query)
 	if len(validationErrors) > 0 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error":      "Parâmetros inválidos",
+			"error":      "Parametros invalidos",
 			"slug":       slug,
 			"validation": validationErrors,
 		})
@@ -63,17 +89,18 @@ func (h *DynamicQueryHandler) Execute(c *gin.Context) {
 	queryCtx, cancel := context.WithTimeout(ctx, time.Duration(query.TimeoutSeconds)*time.Second)
 	defer cancel()
 
-	results, cacheHit, err := h.executeWithCache(queryCtx, cacheKey, query, args)
+	results, cacheHit, err := h.executeWithCache(queryCtx, cacheKey, query, datasource, args)
 	duration := time.Since(startTime)
 
 	go h.logExecution(query, params, duration, cacheHit, results, err, c)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error":    "Erro ao executar query",
-			"slug":     slug,
-			"details":  err.Error(),
-			"duration": duration.String(),
+			"error":      "Erro ao executar query",
+			"slug":       slug,
+			"datasource": datasource.Slug,
+			"details":    err.Error(),
+			"duration":   duration.String(),
 		})
 		return
 	}
@@ -83,12 +110,52 @@ func (h *DynamicQueryHandler) Execute(c *gin.Context) {
 		"meta": gin.H{
 			"slug":       slug,
 			"name":       query.Name,
+			"datasource": datasource.Slug,
+			"driver":     datasource.Driver,
 			"count":      len(results),
 			"cache_hit":  cacheHit,
 			"duration":   duration.String(),
 			"parameters": params,
 		},
 	})
+}
+
+func (h *DynamicQueryHandler) executeWithCache(
+	ctx context.Context,
+	cacheKey string,
+	query *models.Query,
+	datasource *database.DatasourceConfig,
+	args []interface{},
+) ([]map[string]interface{}, bool, error) {
+	var cacheHit bool = true
+	var results []map[string]interface{}
+
+	data, err := h.cacheService.GetOrSet(ctx, cacheKey, func() (interface{}, error) {
+		cacheHit = false
+		fmt.Printf("[Query] Executando '%s' no datasource '%s' (%s)...\n",
+			query.Slug, datasource.Slug, datasource.Driver)
+
+		return h.connManager.Query(ctx, *datasource, query.SQLQuery, args...)
+	})
+
+	if err != nil {
+		return nil, false, err
+	}
+
+	if cacheHit {
+		fmt.Printf("[Cache] HIT para query '%s'\n", query.Slug)
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return nil, cacheHit, err
+	}
+
+	if err := json.Unmarshal(jsonData, &results); err != nil {
+		return nil, cacheHit, err
+	}
+
+	return results, cacheHit, nil
 }
 
 func (h *DynamicQueryHandler) extractAndValidateParams(
@@ -103,7 +170,7 @@ func (h *DynamicQueryHandler) extractAndValidateParams(
 
 		if rawValue == "" {
 			if p.IsRequired {
-				errors[p.Name] = "parâmetro obrigatório não fornecido"
+				errors[p.Name] = "parametro obrigatorio nao fornecido"
 				continue
 			}
 			if p.DefaultValue != nil {
@@ -115,7 +182,7 @@ func (h *DynamicQueryHandler) extractAndValidateParams(
 
 		converted, err := h.convertParamType(rawValue, p.ParamType)
 		if err != nil {
-			errors[p.Name] = fmt.Sprintf("tipo inválido: esperado %s, erro: %s", p.ParamType, err.Error())
+			errors[p.Name] = fmt.Sprintf("tipo invalido: esperado %s, erro: %s", p.ParamType, err.Error())
 			continue
 		}
 
@@ -171,6 +238,10 @@ func (h *DynamicQueryHandler) buildQueryArgs(
 		}
 	}
 
+	if maxPos == 0 {
+		return nil
+	}
+
 	args := make([]interface{}, maxPos)
 
 	for _, def := range definitions {
@@ -180,44 +251,6 @@ func (h *DynamicQueryHandler) buildQueryArgs(
 	}
 
 	return args
-}
-
-func (h *DynamicQueryHandler) executeWithCache(
-	ctx context.Context,
-	cacheKey string,
-	query *models.Query,
-	args []interface{},
-) ([]map[string]interface{}, bool, error) {
-	var cacheHit bool
-	var results []map[string]interface{}
-
-	data, err := h.cacheService.GetOrSet(ctx, cacheKey, func() (interface{}, error) {
-		cacheHit = false
-		fmt.Printf("🔍 Executando query '%s' no Oracle...\n", query.Slug)
-		return h.queryService.ExecuteQueryDirect(ctx, query.SQLQuery, args...)
-	})
-
-	if err != nil {
-		return nil, false, err
-	}
-
-	if !cacheHit {
-		cacheHit = false
-	} else {
-		cacheHit = true
-		fmt.Printf("✅ Cache HIT para query '%s'\n", query.Slug)
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return nil, cacheHit, err
-	}
-
-	if err := json.Unmarshal(jsonData, &results); err != nil {
-		return nil, cacheHit, err
-	}
-
-	return results, cacheHit, nil
 }
 
 func (h *DynamicQueryHandler) logExecution(
@@ -253,7 +286,7 @@ func (h *DynamicQueryHandler) logExecution(
 	defer cancel()
 
 	if err := h.queryRepo.LogExecution(ctx, execution); err != nil {
-		fmt.Printf("⚠️  Erro ao logar execução: %v\n", err)
+		fmt.Printf("[Log] Erro ao registrar execucao: %v\n", err)
 	}
 }
 
@@ -261,6 +294,8 @@ func stringPtr(s string) *string {
 	return &s
 }
 
+// ListQueries lista todas as queries ativas.
+// GET /api/queries
 func (h *DynamicQueryHandler) ListQueries(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -280,6 +315,7 @@ func (h *DynamicQueryHandler) ListQueries(c *gin.Context) {
 			"description": q.Description,
 			"endpoint":    fmt.Sprintf("/api/query/%s", q.Slug),
 			"cache_ttl":   q.CacheTTL,
+			"datasource":  q.DatasourceSlug,
 			"parameters":  q.Parameters,
 		}
 		endpoints = append(endpoints, endpoint)
