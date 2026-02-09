@@ -179,6 +179,16 @@ class DatasourceController extends Controller
 
     public function testConnection(Datasource $datasource): RedirectResponse
     {
-        return back()->with('info', 'Teste de conexão será implementado em breve.');
+        $result = $datasource->testConnection();
+
+        if ($result['success']) {
+            $message = "Conexao OK! ({$result['duration_ms']}ms)";
+            if (!empty($result['server_version'])) {
+                $message .= " - {$result['server_version']}";
+            }
+            return back()->with('success', $message);
+        }
+
+        return back()->with('error', "Falha na conexao: {$result['message']}");
     }
 }
