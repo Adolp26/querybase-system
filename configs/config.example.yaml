@@ -1,34 +1,44 @@
+# =============================================================================
+# QUERYBASE API - Configuracao
+# =============================================================================
+# Copie este arquivo para config.yaml e ajuste os valores.
+#
+# Este arquivo configura apenas a INFRAESTRUTURA da API:
+# - Servidor HTTP
+# - Redis (cache)
+# - PostgreSQL (metadados)
+#
+# Datasources de producao (Oracle, MySQL, PostgreSQL) sao cadastrados
+# dinamicamente via interface Laravel.
+# =============================================================================
+
 server:
   port: "8080"
-  mode: debug
+  mode: debug  # debug ou release
 
+# Redis - Cache de resultados de queries
 redis:
-  host: localhost
-  port: "6379"
+  host: ${REDIS_HOST:-localhost}
+  port: ${REDIS_PORT:-6379}
   password: ""
   db: 0
-  ttl: 300
+  ttl: 300  # TTL padrao em segundos
 
-oracle:
-  host: ${ORACLE_HOST}
-  port: "1521"
-  service: ${ORACLE_SERVICE}
-  username: ${ORACLE_USERNAME}
-  password: ${ORACLE_PASSWORD}
-
+# PostgreSQL - Banco de METADADOS
+# Armazena: datasources, queries, logs de execucao
+# NAO e um datasource de producao
 postgres:
-  host: ${POSTGRES_HOST}
-  port: "5432"
-  database: ${POSTGRES_DB}
-  username: ${POSTGRES_USER}
-  password: ${POSTGRES_PASSWORD}
+  host: ${POSTGRES_HOST:-localhost}
+  port: ${POSTGRES_PORT:-5432}
+  database: ${POSTGRES_DB:-querybase_metadata}
+  username: ${POSTGRES_USER:-querybase}
+  password: ${POSTGRES_PASSWORD:-querybase123}
   sslmode: disable
 
+# Seguranca
 security:
   enable_auth: false
-  api_keys:
-    - ${API_KEY_1}
-    - ${API_KEY_2}
+  api_keys: []
   enable_rate_limit: true
   requests_per_minute: 60
   burst_size: 10
