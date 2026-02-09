@@ -3,7 +3,6 @@ package models
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Redis    RedisConfig    `mapstructure:"redis"`
-	Oracle   OracleConfig   `mapstructure:"oracle"`
 	Postgres PostgresConfig `mapstructure:"postgres"`
 	Security SecurityConfig `mapstructure:"security"`
 }
