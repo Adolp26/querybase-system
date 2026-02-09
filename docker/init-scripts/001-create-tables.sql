@@ -91,7 +91,7 @@ CREATE TRIGGER update_queries_updated_at
 INSERT INTO datasources (slug, name, driver, host, port, database_name, username, password)
 VALUES (
     'oracle-principal',
-    'Oracle Principal (MV)',
+    'Oracle Principal',
     'oracle',
     'localhost',
     '1521',
