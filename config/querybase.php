@@ -4,6 +4,8 @@ return [
 
     'api_url' => env('QUERYBASE_API_URL', 'http://localhost:8080'),
 
+    'encryption_key' => env('QUERYBASE_ENCRYPTION_KEY'),
+
     'connection_timeout' => env('QUERYBASE_CONNECTION_TIMEOUT', 30),
 
     'query_timeout' => env('QUERYBASE_QUERY_TIMEOUT', 120),
