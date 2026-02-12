@@ -5,9 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Contracts\Encryption\DecryptException;
+use App\Services\EncryptionService;
 
 class Datasource extends Model
 {
@@ -48,11 +47,11 @@ class Datasource extends Model
         'is_active' => true,
     ];
 
-
     public function setPasswordAttribute(?string $value): void
     {
         if ($value !== null && $value !== '') {
-            $this->attributes['password'] = Crypt::encryptString($value);
+            $encryption = app(EncryptionService::class);
+            $this->attributes['password'] = $encryption->encrypt($value);
         }
     }
 
@@ -63,13 +62,12 @@ class Datasource extends Model
         }
 
         try {
-            return Crypt::decryptString($value);
-        } catch (DecryptException $e) {
-           
+            $encryption = app(EncryptionService::class);
+            return $encryption->decrypt($value);
+        } catch (\Exception $e) {
             return $value;
         }
     }
-
 
     public function queries(): HasMany
     {
