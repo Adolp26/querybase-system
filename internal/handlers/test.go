@@ -24,6 +24,7 @@ func (h *TestHandler) GetTestData(c *gin.Context) {
 	data, err := h.cacheService.GetOrSet(
 		c.Request.Context(),
 		cacheKey,
+		0,
 		func() (interface{}, error) {
 			time.Sleep(2 * time.Second)
 
