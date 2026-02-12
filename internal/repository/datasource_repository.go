@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/adolp26/querybase/internal/crypto"
 	"github.com/adolp26/querybase/internal/database"
 )
 
@@ -44,7 +43,7 @@ func (r *DatasourceRepository) FindByID(ctx context.Context, id string) (*databa
 	}
 
 	ds.Port = port
-	decryptPassword(&ds)
+	//decryptPassword(&ds)
 
 	return &ds, nil
 }
@@ -76,7 +75,7 @@ func (r *DatasourceRepository) FindBySlug(ctx context.Context, slug string) (*da
 	}
 
 	ds.Port = port
-	decryptPassword(&ds)
+	//decryptPassword(&ds)
 
 	return &ds, nil
 }
@@ -114,20 +113,20 @@ func (r *DatasourceRepository) ListActive(ctx context.Context) ([]database.Datas
 		}
 
 		ds.Port = port
-		decryptPassword(&ds)
+		//decryptPassword(&ds)
 		datasources = append(datasources, ds)
 	}
 
 	return datasources, nil
 }
 
-func decryptPassword(ds *database.DatasourceConfig) {
-	if ds.Password == "" {
-		return
-	}
-	decrypted, err := crypto.Decrypt(ds.Password)
-	if err != nil {
-		return
-	}
-	ds.Password = decrypted
-}
+// func decryptPassword(ds *database.DatasourceConfig) {
+// 	if ds.Password == "" {
+// 		return
+// 	}
+// 	decrypted, err := crypto.Decrypt(ds.Password)
+// 	if err != nil {
+// 		return
+// 	}
+// 	ds.Password = decrypted
+// }
