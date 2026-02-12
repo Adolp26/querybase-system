@@ -28,11 +28,11 @@ func (s *QueryService) ExecuteQuery(
 	args ...interface{},
 ) ([]map[string]interface{}, error) {
 
-	data, err := s.cache.GetOrSet(ctx, cacheKey, func() (interface{}, error) {
+	data, err := s.cache.GetOrSet(ctx, cacheKey, 0, func() (interface{}, error) {
 		queryCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
-		fmt.Printf("🔍 Executando query no Oracle...\n")
+		fmt.Printf("Executando query no Oracle...\n")
 		startTime := time.Now()
 
 		results, err := s.oracle.Query(queryCtx, query, args...)
@@ -41,7 +41,7 @@ func (s *QueryService) ExecuteQuery(
 		}
 
 		duration := time.Since(startTime)
-		fmt.Printf("✅ Query executada em %v - %d registros\n", duration, len(results))
+		fmt.Printf("Query executada em %v - %d registros\n", duration, len(results))
 
 		return results, nil
 	})
@@ -76,7 +76,7 @@ func (s *QueryService) ExecuteQueryDirect(
 	}
 
 	duration := time.Since(startTime)
-	fmt.Printf("✅ Query executada em %v - %d registros\n", duration, len(results))
+	fmt.Printf("Query executada em %v - %d registros\n", duration, len(results))
 
 	return results, nil
 }
