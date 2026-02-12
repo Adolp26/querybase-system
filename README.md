@@ -5,10 +5,10 @@ API Gateway para analytics empresariais. Transforma queries SQL cadastradas em e
 ## Arquitetura
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Power BI   │────▶│  API (Go)   │────▶│   Oracle    │
-│  Analistas  │     │   :8080     │     │  (Dados)    │
-└─────────────┘     └──────┬──────┘     └─────────────┘
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│    sistemas     │────▶│   API Golang    │────▶│     Oracle     │
+│    clientes     │     │   (porta 8080)  │     │   (Produção)    │
+└─────────────────┘     └────────┬────────┘     └─────────────────┘
                            │
               ┌────────────┼────────────┐
               ▼            ▼            ▼
