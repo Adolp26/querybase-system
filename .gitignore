@@ -1,0 +1,29 @@
+# Executáveis compilados
+/cmd/api/api
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+*.test
+*.out
+go.work
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Configs locais
+configs/config.yaml
+configs/local.yaml
+.env
+
+# Docker volumes
+/docker/data/
+
+# Logs
+*.log
