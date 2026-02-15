@@ -41,7 +41,7 @@ class Datasource extends Model
     ];
 
     protected $attributes = [
-        'driver' => 'oracle',
+        'driver' => 'postgres',
         'max_open_conns' => 25,
         'max_idle_conns' => 5,
         'is_active' => true,
@@ -49,27 +49,25 @@ class Datasource extends Model
 
     public function setPasswordAttribute(?string $value): void
     {
-        // if ($value !== null && $value !== '') {
-        //     $encryption = app(EncryptionService::class);
-        //     $this->attributes['password'] = $encryption->encrypt($value);
-        // }
-
-        $this->attributes['password'] = $value;
+        if ($value !== null && $value !== '') {
+            $encryption = app(EncryptionService::class);
+            $this->attributes['password'] = $encryption->encrypt($value);
+        }
     }
 
-    // public function getPasswordAttribute(?string $value): ?string
-    // {
-    //     if ($value === null || $value === '') {
-    //         return null;
-    //     }
+    public function getPasswordAttribute(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
 
-    //     try {
-    //         $encryption = app(EncryptionService::class);
-    //         return $encryption->decrypt($value);
-    //     } catch (\Exception $e) {
-    //         return $value;
-    //     }
-    // }
+        try {
+            $encryption = app(EncryptionService::class);
+            return $encryption->decrypt($value);
+        } catch (\Exception $e) {
+            return $value;
+        }
+    }
 
     public function queries(): HasMany
     {
