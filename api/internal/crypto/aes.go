@@ -40,12 +40,13 @@ func Decrypt(encryptedBase64 string) (string, error) {
 		return "", errors.New("dados criptografados invalidos")
 	}
 
-	if len(data) < 12 {
+	if len(data) < 28 {
 		return "", errors.New("dados criptografados muito curtos")
 	}
 
 	nonce := data[:12]
-	ciphertext := data[12:]
+	tag := data[len(data)-16:]
+	ciphertext := data[12 : len(data)-16]
 
 	block, err := aes.NewCipher(encryptionKey)
 	if err != nil {
@@ -57,7 +58,8 @@ func Decrypt(encryptedBase64 string) (string, error) {
 		return "", err
 	}
 
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	combined := append(ciphertext, tag...)
+	plaintext, err := gcm.Open(nil, nonce, combined, nil)
 	if err != nil {
 		return "", errors.New("falha ao descriptografar: chave incorreta ou dados corrompidos")
 	}
