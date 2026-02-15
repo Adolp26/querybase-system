@@ -1,0 +1,135 @@
+version: '3.8'
+
+# Docker Compose para rodar todo o sistema QueryBase
+# - API Golang (porta 8080)
+# - Web Laravel (porta 8000)
+# - PostgreSQL (porta 5432)
+# - Redis (porta 6379)
+
+services:
+  # ===========================================
+  # INFRAESTRUTURA
+  # ===========================================
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: querybase-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: querybase
+      POSTGRES_PASSWORD: querybase123
+      POSTGRES_DB: querybase_metadata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./querybase-api/docker/init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U querybase -d querybase_metadata"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - querybase-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: querybase-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - querybase-network
+
+  # ===========================================
+  # API GOLANG
+  # ===========================================
+
+  api:
+    build:
+      context: ./querybase-api
+      dockerfile: Dockerfile
+    container_name: querybase-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - SERVER_MODE=debug
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=querybase_metadata
+      - POSTGRES_USER=querybase
+      - POSTGRES_PASSWORD=querybase123
+    volumes:
+      - ./querybase-api/configs:/app/configs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - querybase-network
+
+  # ===========================================
+  # WEB LARAVEL
+  # ===========================================
+
+  web-app:
+    build:
+      context: ./querybase-web
+      dockerfile: Dockerfile
+    container_name: querybase-web-app
+    restart: unless-stopped
+    working_dir: /var/www
+    environment:
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=querybase_metadata
+      - DB_USERNAME=querybase
+      - DB_PASSWORD=querybase123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CACHE_STORE=redis
+    volumes:
+      - ./querybase-web:/var/www
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - querybase-network
+
+  web-nginx:
+    image: nginx:alpine
+    container_name: querybase-web-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./querybase-web:/var/www
+      - ./querybase-web/docker/nginx:/etc/nginx/conf.d
+    depends_on:
+      - web-app
+    networks:
+      - querybase-network
+
+networks:
+  querybase-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
