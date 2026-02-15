@@ -18,8 +18,8 @@ server:
 
 # Redis - Cache de resultados de queries
 redis:
-  host: ${REDIS_HOST:-localhost}
-  port: ${REDIS_PORT:-6379}
+  host: redis
+  port: 6379
   password: ""
   db: 0
   ttl: 300  # TTL padrao em segundos
@@ -28,11 +28,11 @@ redis:
 # Armazena: datasources, queries, logs de execucao
 # NAO e um datasource de producao
 postgres:
-  host: ${POSTGRES_HOST:-localhost}
-  port: ${POSTGRES_PORT:-5432}
-  database: ${POSTGRES_DB:-querybase_metadata}
-  username: ${POSTGRES_USER:-querybase}
-  password: ${POSTGRES_PASSWORD:-querybase123}
+  host: postgres
+  port: 5432
+  database: querybase_metadata
+  username: querybase
+  password: querybase123
   sslmode: disable
 
 # Seguranca
