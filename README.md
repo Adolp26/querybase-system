@@ -2,14 +2,14 @@
 
 Gateway de API multi-fonte para análises de negócio, permitindo que clientes executem queries SQL em múltiplas bases de dados (Oracle, PostgreSQL, MySQL) através de uma API REST com cache integrado.
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 querybase-system/
-├── querybase-web/      # Interface administrativa (Laravel 10 + PHP)
+├── web/      # Interface administrativa (Laravel 10 + PHP)
 │   └── Gerenciamento de datasources e queries via UI
 │
-├── querybase-api/      # Motor de execução (Golang + Gin)
+├── api/      # Motor de execução (Golang + Gin)
 │   └── Execução dinâmica de queries com cache Redis
 │
 └── docker-compose.yml  # Infraestrutura completa
@@ -29,7 +29,7 @@ O QueryBase resolve isso criando uma camada intermediária com:
 - ✅ Criptografia AES-256-GCM de senhas
 - ✅ API REST simples para consumo
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 ### querybase-web (Laravel)
 - Interface para cadastrar datasources (conexões de banco)
@@ -44,7 +44,7 @@ O QueryBase resolve isso criando uma camada intermediária com:
 - Descriptografia de senhas
 - Rate limiting e autenticação
 
-## 🔐 Segurança - Criptografia Compartilhada
+## Segurança - Criptografia Compartilhada
 
 As senhas de datasources são criptografadas usando **AES-256-GCM**, compartilhado entre Laravel e Golang.
 
@@ -68,12 +68,12 @@ QUERYBASE_API_URL=http://localhost:8080
 QUERYBASE_ENCRYPTION_KEY=SuaChaveGeradaAqui==
 ```
 
-⚠️ **IMPORTANTE:**
+**IMPORTANTE:**
 - A chave DEVE ser idêntica nos dois projetos
 - Mantenha em segredo (não commite no git)
 - Use `.env.example` apenas para documentar
 
-## 🚀 Como Usar
+## Como Usar
 
 ### 1. Iniciar infraestrutura
 ```bash
@@ -182,31 +182,9 @@ Golang API
     └─→ Retorna JSON para cliente
 ```
 
-## 🎯 Casos de Uso
+## Casos de Uso
 
 1. **BI Self-Service Seguro**: Clientes executam queries pré-aprovadas sem acesso direto ao banco
 2. **APIs de Dados**: Expor dados de produção via REST sem sobrecarregar o banco
 3. **Dashboards em Tempo Real**: Cache inteligente reduz carga em queries frequentes
 4. **Migração Gradual**: Centralizar acessos antes de migrar para data warehouse
-
-## 📝 Commits e Versionamento
-
-Este projeto segue **Conventional Commits** em português:
-- `feat:` nova funcionalidade
-- `fix:` correção de bug
-- `refactor:` refatoração de código
-- `docs:` documentação
-- `chore:` tarefas gerais
-
-## 🔮 Roadmap Futuro
-
-- [ ] Autenticação JWT para API
-- [ ] Dashboard de monitoramento de queries
-- [ ] Suporte a queries parametrizadas
-- [ ] Logs detalhados de auditoria
-- [ ] Métricas com Prometheus
-- [ ] Suporte a mais drivers (SQL Server, MongoDB)
-
-## 📄 Licença
-
-Projeto proprietário - Todos os direitos reservados.
