@@ -23,7 +23,7 @@ services:
       POSTGRES_DB: querybase_metadata
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./querybase-api/docker/init-scripts:/docker-entrypoint-initdb.d
+      - ./api/docker/init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U querybase -d querybase_metadata"]
       interval: 5s
@@ -55,7 +55,7 @@ services:
 
   api:
     build:
-      context: ./querybase-api
+      context: ./api
       dockerfile: Dockerfile
     container_name: querybase-api
     restart: unless-stopped
@@ -72,7 +72,7 @@ services:
       - POSTGRES_USER=querybase
       - POSTGRES_PASSWORD=querybase123
     volumes:
-      - ./querybase-api/configs:/app/configs
+      - ./api/configs:/app/configs
     depends_on:
       postgres:
         condition: service_healthy
@@ -87,7 +87,7 @@ services:
 
   web-app:
     build:
-      context: ./querybase-web
+      context: ./web
       dockerfile: Dockerfile
     container_name: querybase-web-app
     restart: unless-stopped
@@ -103,7 +103,7 @@ services:
       - REDIS_PORT=6379
       - CACHE_STORE=redis
     volumes:
-      - ./querybase-web:/var/www
+      - ./web:/var/www
     depends_on:
       postgres:
         condition: service_healthy
@@ -119,8 +119,8 @@ services:
     ports:
       - "8000:80"
     volumes:
-      - ./querybase-web:/var/www
-      - ./querybase-web/docker/nginx:/etc/nginx/conf.d
+      - ./web:/var/www
+      - ./web/docker/nginx:/etc/nginx/conf.d
     depends_on:
       - web-app
     networks:
