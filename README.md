@@ -15,7 +15,7 @@ querybase-system/
 └── docker-compose.yml  # Infraestrutura completa
 ```
 
-## 🎯 Problema que Resolve
+## Problema que Resolve
 
 Em ambientes onde clientes conectam ferramentas de BI (Power BI, Tableau, etc.) diretamente em bancos de produção, surgem problemas de:
 - **Performance**: Queries pesadas impactam a produção
@@ -158,7 +158,7 @@ Resposta:
 - Redis 7
 - PostgreSQL 15
 
-## 📊 Fluxo de Dados
+## Fluxo de Dados
 
 ```
 Cliente (Power BI, Postman, etc.)
