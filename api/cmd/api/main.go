@@ -18,9 +18,7 @@ func main() {
 	fmt.Println("[QueryBase] Iniciando API...")
 	fmt.Println("")
 
-	// =========================================================================
-	// CONFIGURACOES
-	// =========================================================================
+
 	fmt.Println("[Config] Carregando configuracoes...")
 	cfg, err := config.LoadConfig("configs/config.yaml")
 	if err != nil {
@@ -28,7 +26,7 @@ func main() {
 	}
 	fmt.Println("[Config] OK")
 
-	// Criptografia (descriptografar senhas de datasources)
+
 	fmt.Println("[Crypto] Inicializando...")
 	if err := crypto.Init(); err != nil {
 		fmt.Printf("[Crypto] Aviso: %v (senhas nao serao descriptografadas)\n", err)
@@ -36,9 +34,7 @@ func main() {
 		fmt.Println("[Crypto] OK")
 	}
 
-	// =========================================================================
-	// INFRAESTRUTURA
-	// =========================================================================
+
 
 	// Redis (cache de queries)
 	fmt.Println("[Redis] Conectando...")
@@ -49,7 +45,7 @@ func main() {
 	defer redisClient.Close()
 	fmt.Println("[Redis] OK")
 
-	// PostgreSQL (metadados - datasources e queries cadastrados via UI)
+	// PostgreSQL 
 	fmt.Println("[PostgreSQL] Conectando ao banco de metadados...")
 	postgresClient, err := database.NewPostgresClient(cfg.Postgres)
 	if err != nil {
@@ -58,28 +54,22 @@ func main() {
 	defer postgresClient.Close()
 	fmt.Println("[PostgreSQL] OK")
 
-	// ConnectionManager (conexoes dinamicas - Oracle, MySQL, PostgreSQL de producao)
+	// ConnectionManager (conexoes dinamicas)
 	fmt.Println("[ConnectionManager] Inicializando...")
 	connManager := database.NewConnectionManager()
 	defer connManager.CloseAll()
 	fmt.Println("[ConnectionManager] OK")
 
-	// =========================================================================
-	// SERVICES E REPOSITORIES
-	// =========================================================================
+
 	cacheService := services.NewCacheService(redisClient)
 	queryRepo := repository.NewQueryRepository(postgresClient.GetDB())
 	datasourceRepo := repository.NewDatasourceRepository(postgresClient.GetDB())
 
-	// =========================================================================
-	// HANDLERS
-	// =========================================================================
+
 	connectionHandler := handlers.NewConnectionHandler(connManager)
 	dynamicHandler := handlers.NewDynamicQueryHandler(queryRepo, datasourceRepo, connManager, cacheService)
 
-	// =========================================================================
-	// ROUTER
-	// =========================================================================
+
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -120,9 +110,7 @@ func main() {
 	}
 	router.Use(middleware.APIKeyAuth(authConfig))
 
-	// =========================================================================
-	// ROTAS
-	// =========================================================================
+// Routes
 
 	// Health check
 	router.GET("/health", handlers.HealthCheck)
@@ -136,9 +124,7 @@ func main() {
 	// Executar query por slug
 	router.GET("/api/query/:slug", dynamicHandler.Execute)
 
-	// =========================================================================
-	// INICIAR SERVIDOR
-	// =========================================================================
+
 	addr := fmt.Sprintf(":%s", cfg.Server.Port)
 	fmt.Println("")
 	fmt.Println("==========================================================")
