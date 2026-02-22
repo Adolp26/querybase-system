@@ -24,5 +24,15 @@ php artisan migrate --force
 
 echo "[Entrypoint] Migrations concluídas!"
 
+# Verifica se já existem dados no banco
+datasource_count=$(php artisan tinker --execute="echo App\Models\Datasource::count();")
+if [ "$datasource_count" -eq 0 ]; then
+    echo "[Entrypoint] Populando banco com dados de demonstração..."
+    php artisan db:seed --class=DemoDataSeeder --force
+    echo "[Entrypoint] Dados de demonstração inseridos!"
+else
+    echo "[Entrypoint] Dados já existem no banco (pulando seeder)"
+fi
+
 echo "[Entrypoint] Iniciando PHP-FPM..."
 exec php-fpm
