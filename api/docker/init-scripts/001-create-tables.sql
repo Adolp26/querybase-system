@@ -88,42 +88,6 @@ CREATE TRIGGER update_queries_updated_at
     BEFORE UPDATE ON queries
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-INSERT INTO datasources (slug, name, driver, host, port, database_name, username, password)
-VALUES (
-    'oracle-principal',
-    'Oracle Principal',
-    'oracle',
-    'localhost',
-    '1521',
-    'XEPDB1',
-    'querybase',
-    'querybase123'
-);
-
-INSERT INTO queries (slug, name, description, sql_query, cache_ttl, timeout_seconds)
-VALUES (
-    'employees-all',
-    'Listar Todos os Funcionarios',
-    'Retorna os primeiros 100 funcionarios cadastrados no sistema.',
-    'SELECT employee_id, first_name, last_name, email, department_id FROM employees WHERE ROWNUM <= 100',
-    300,
-    30
-);
-
-INSERT INTO queries (slug, name, description, sql_query, cache_ttl, timeout_seconds)
-VALUES (
-    'employees-by-department',
-    'Funcionarios por Departamento',
-    'Retorna todos os funcionarios de um departamento especifico.',
-    'SELECT employee_id, first_name, last_name, email, department_id FROM employees WHERE department_id = :1',
-    300,
-    30
-);
-
-INSERT INTO query_parameters (query_id, name, param_type, is_required, description, position)
-SELECT id, 'department', 'integer', true, 'ID do departamento (obrigatorio)', 1
-FROM queries WHERE slug = 'employees-by-department';
-
 CREATE VIEW vw_queries_with_params AS
 SELECT
     q.id, q.slug, q.name, q.description, q.sql_query,
